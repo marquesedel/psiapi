@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSI AI API - Teste de Endpoints</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .response pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .response.error {
+            border-left-color: #f5576c;
+            background: #ffe5e5;
+        }
+
+        .response.success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 10px;
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #e0e0e0;
+            border-color: #667eea;
+        }
+
+        .file-name {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ PSI AI API - Teste de Endpoints</h1>
+
+        <!-- Psicólogos -->
+        <div class="section">
+            <h2>👨‍⚕️ Psicólogos</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>Nome:</label>
+                        <input type="text" id="psychologist-name" placeholder="Nome do psicólogo">
+                    </div>
+                    <div class="form-group">
+                        <label>Email (opcional):</label>
+                        <input type="email" id="psychologist-email" placeholder="email@exemplo.com">
+                    </div>
+                    <button onclick="createPsychologist()">Criar Psicólogo</button>
+                    <button class="secondary" onclick="listPsychologists()">Listar Psicólogos</button>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>ID do Psicólogo:</label>
+                        <input type="text" id="psychologist-id" placeholder="UUID do psicólogo">
+                    </div>
+                    <button onclick="getPsychologist()">Buscar Psicólogo</button>
+                </div>
+            </div>
+            <div id="psychologist-response" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Pacientes -->
+        <div class="section">
+            <h2>👤 Pacientes</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>Nome:</label>
+                        <input type="text" id="patient-name" placeholder="Nome do paciente">
+                    </div>
+                    <button onclick="createPatient()">Criar Paciente</button>
+                    <button class="secondary" onclick="listPatients()">Listar Pacientes</button>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>ID do Paciente:</label>
+                        <input type="text" id="patient-id" placeholder="UUID do paciente">
+                    </div>
+                    <button onclick="getPatient()">Buscar Paciente</button>
+                </div>
+            </div>
+            <div id="patient-response" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Sessões -->
+        <div class="section">
+            <h2>📋 Sessões</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>ID do Psicólogo:</label>
+                        <input type="text" id="session-psychologist-id" placeholder="UUID do psicólogo">
+                    </div>
+                    <div class="form-group">
+                        <label>ID do Paciente:</label>
+                        <input type="text" id="session-patient-id" placeholder="UUID do paciente">
+                    </div>
+                    <div class="form-group">
+                        <label>Arquivo de Áudio:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="audio-file" accept="audio/*" onchange="updateFileName('audio-file', 'audio-file-name')">
+                            <label for="audio-file" class="file-input-label">
+                                📁 Selecione um arquivo de áudio
+                            </label>
+                            <div id="audio-file-name" class="file-name"></div>
+                        </div>
+                    </div>
+                    <button onclick="createSession()">Criar Sessão</button>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>ID da Sessão:</label>
+                        <input type="text" id="session-id" placeholder="UUID da sessão">
+                    </div>
+                    <button onclick="getSession()">Buscar Sessão</button>
+                    <button class="secondary" onclick="listSessions()">Listar Sessões</button>
+                </div>
+            </div>
+            <div id="session-response" class="response" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${isError ? 'error' : 'success'}`;
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function updateFileName(inputId, displayId) {
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(displayId);
+            if (input.files.length > 0) {
+                display.textContent = `Arquivo selecionado: ${input.files[0].name}`;
+            } else {
+                display.textContent = '';
+            }
+        }
+
+        // Psicólogos
+        async function createPsychologist() {
+            const name = document.getElementById('psychologist-name').value;
+            const email = document.getElementById('psychologist-email').value;
+
+            if (!name) {
+                showResponse('psychologist-response', { error: 'Nome é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/psychologists/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email: email || null })
+                });
+                const data = await response.json();
+                showResponse('psychologist-response', data, !response.ok);
+            } catch (error) {
+                showResponse('psychologist-response', { error: error.message }, true);
+            }
+        }
+
+        async function getPsychologist() {
+            const id = document.getElementById('psychologist-id').value;
+            if (!id) {
+                showResponse('psychologist-response', { error: 'ID é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/psychologists/${id}`);
+                const data = await response.json();
+                showResponse('psychologist-response', data, !response.ok);
+            } catch (error) {
+                showResponse('psychologist-response', { error: error.message }, true);
+            }
+        }
+
+        async function listPsychologists() {
+            try {
+                const response = await fetch(`${API_URL}/psychologists/`);
+                const data = await response.json();
+                showResponse('psychologist-response', data, !response.ok);
+            } catch (error) {
+                showResponse('psychologist-response', { error: error.message }, true);
+            }
+        }
+
+        // Pacientes
+        async function createPatient() {
+            const name = document.getElementById('patient-name').value;
+
+            if (!name) {
+                showResponse('patient-response', { error: 'Nome é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/patients/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await response.json();
+                showResponse('patient-response', data, !response.ok);
+            } catch (error) {
+                showResponse('patient-response', { error: error.message }, true);
+            }
+        }
+
+        async function getPatient() {
+            const id = document.getElementById('patient-id').value;
+            if (!id) {
+                showResponse('patient-response', { error: 'ID é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/patients/${id}`);
+                const data = await response.json();
+                showResponse('patient-response', data, !response.ok);
+            } catch (error) {
+                showResponse('patient-response', { error: error.message }, true);
+            }
+        }
+
+        async function listPatients() {
+            try {
+                const response = await fetch(`${API_URL}/patients/`);
+                const data = await response.json();
+                showResponse('patient-response', data, !response.ok);
+            } catch (error) {
+                showResponse('patient-response', { error: error.message }, true);
+            }
+        }
+
+        // Sessões
+        async function createSession() {
+            const psychologistId = document.getElementById('session-psychologist-id').value;
+            const patientId = document.getElementById('session-patient-id').value;
+            const audioFile = document.getElementById('audio-file').files[0];
+
+            if (!psychologistId || !patientId) {
+                showResponse('session-response', { error: 'IDs de psicólogo e paciente são obrigatórios' }, true);
+                return;
+            }
+
+            if (!audioFile) {
+                showResponse('session-response', { error: 'Arquivo de áudio é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('psychologist_id', psychologistId);
+                formData.append('patient_id', patientId);
+                formData.append('audio', audioFile);
+
+                const response = await fetch(`${API_URL}/sessions/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                showResponse('session-response', data, !response.ok);
+            } catch (error) {
+                showResponse('session-response', { error: error.message }, true);
+            }
+        }
+
+        async function getSession() {
+            const id = document.getElementById('session-id').value;
+            if (!id) {
+                showResponse('session-response', { error: 'ID é obrigatório' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/sessions/${id}`);
+                const data = await response.json();
+                showResponse('session-response', data, !response.ok);
+            } catch (error) {
+                showResponse('session-response', { error: error.message }, true);
+            }
+        }
+
+        async function listSessions() {
+            try {
+                const response = await fetch(`${API_URL}/sessions/`);
+                const data = await response.json();
+                showResponse('session-response', data, !response.ok);
+            } catch (error) {
+                showResponse('session-response', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>
+

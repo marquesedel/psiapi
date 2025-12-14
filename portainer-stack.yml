@@ -1,0 +1,35 @@
+version: '3.8'
+
+# Este arquivo é uma versão otimizada para Portainer
+# Use este arquivo se preferir fazer upload direto no Portainer
+
+services:
+  psi-ai-api:
+    image: psi-ai-api:latest
+    # Ou use build se preferir build no Portainer:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: psi-ai-api
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-audio-sessions}
+      - API_KEY=${API_KEY}
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - psi-ai-network
+
+networks:
+  psi-ai-network:
+    driver: bridge
