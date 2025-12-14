@@ -197,6 +197,78 @@ Gere a evolução FAP completa seguindo rigorosamente o formato acima, aplicando
         
         return response.choices[0].message.content
     
+    def anonymize_names_in_transcription(self, transcription: str, patient_name: str, psychologist_name: str) -> str:
+        """Substitui nomes de pessoas por letras na transcrição (P para Pedro, R para Rafael, etc.)"""
+        prompt = f"""Analise a seguinte transcrição de uma sessão de psicoterapia e substitua todos os nomes próprios de pessoas por letras do alfabeto.
+
+Regras:
+- O nome do paciente "{patient_name}" deve ser substituído pela primeira letra do nome (ex: Pedro -> P, Rafael -> R, Maria -> M)
+- O nome da psicóloga "{psychologist_name}" deve ser substituído pela primeira letra do nome
+- Outros nomes próprios mencionados devem ser substituídos pela primeira letra do nome
+- Mantenha o resto do texto exatamente como está
+- Preserve a formatação e pontuação
+
+Transcrição:
+{transcription}
+
+Transcrição com nomes substituídos por letras:"""
+        
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um assistente especializado em anonimização de transcrições, substituindo nomes por letras."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1
+        )
+        
+        return response.choices[0].message.content
+    
+    def generate_session_questions(self, transcription: str, patient_name: str, psychologist_name: str) -> list[str]:
+        """Gera perguntas sobre a sessão para a psicóloga responder"""
+        prompt = f"""Você é um assistente que gera perguntas reflexivas para psicólogos sobre suas sessões de terapia.
+
+REGRAS OBRIGATÓRIAS:
+- Use APENAS "Paciente" para se referir ao paciente
+- Use "você" para se referir à psicóloga (a pessoa que vai responder as perguntas)
+- NUNCA use nomes próprios, letras (como P, R, etc.) ou qualquer identificador pessoal
+- Se a transcrição mencionar nomes ou letras, ignore-os completamente e use apenas "Paciente" e "você"
+
+As perguntas devem ser direcionadas à psicóloga, usando "você" quando apropriado. Exemplos:
+- "Como você percebeu que o Paciente reagiu quando..."
+- "O que você observou sobre a reação do Paciente diante de..."
+- "Como você interveio quando o Paciente mencionou..."
+
+Gere entre 3 a 5 perguntas objetivas e específicas baseadas no conteúdo da transcrição.
+As perguntas devem ajudar a psicóloga a refletir sobre:
+- Reações e comportamentos do Paciente
+- Suas próprias intervenções e observações
+- Dinâmicas da sessão
+- Aspectos importantes que podem ter passado despercebidos
+
+Retorne APENAS as perguntas, uma por linha, sem numeração ou marcadores.
+NUNCA mencione nomes próprios, letras ou identificadores pessoais.
+
+Transcrição:
+{transcription}
+
+Perguntas:"""
+        
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um assistente especializado em análise de sessões de psicoterapia. Você gera perguntas reflexivas direcionadas à psicóloga, usando APENAS 'Paciente' para o paciente e 'você' para a psicóloga. NUNCA use nomes próprios, letras ou identificadores pessoais."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5
+        )
+        
+        # Separa as perguntas por linha
+        questions_text = response.choices[0].message.content.strip()
+        questions = [q.strip() for q in questions_text.split('\n') if q.strip()]
+        
+        return questions
+    
     def process_session(self, transcription: str) -> Dict[str, str]:
         """Processa toda a sessão e retorna todos os resultados"""
         return {

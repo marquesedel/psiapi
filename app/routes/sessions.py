@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends, Body
 from app.models.session import SessionCreate, SessionResponse, SessionUpdate
 from app.services.audio_service import AudioService
 from app.services.openai_service import OpenAIService
@@ -26,24 +26,12 @@ async def create_session(
         # Lê arquivo de áudio
         audio_content = await audio.read()
         
-        # Upload para Supabase Storage
-        try:
-            audio_url = supabase_service.upload_audio(audio_content, audio.filename)
-        except Exception as upload_error:
-            error_msg = str(upload_error)
-            if "Bucket" in error_msg and "not found" in error_msg.lower():
-                logger.error(f"Bucket não encontrado: {error_msg}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=error_msg
-                )
-            raise
-        
-        # Cria sessão no banco
+        # Não salva o áudio no bucket - apenas processa diretamente
+        # Cria sessão no banco sem audio_url
         session_data = {
             "psychologist_id": str(psychologist_id),
             "patient_id": str(patient_id),
-            "audio_url": audio_url
+            "audio_url": None
         }
         session = supabase_service.create_session(session_data)
         
@@ -55,26 +43,56 @@ async def create_session(
         
         # Processa tudo síncronamente antes de retornar
         try:
+            # Busca nomes do paciente e psicólogo para anonimização
+            patient = supabase_service.get_patient(str(patient_id))
+            psychologist = supabase_service.get_psychologist(str(psychologist_id))
+            
+            if not patient:
+                raise HTTPException(status_code=404, detail="Paciente não encontrado")
+            if not psychologist:
+                raise HTTPException(status_code=404, detail="Psicólogo não encontrado")
+            
+            patient_name = patient.get("name", "")
+            psychologist_name = psychologist.get("name", "")
+            
             # 1. Transcreve áudio
             logger.info(f"Transcrevendo áudio da sessão {session_id}")
-            transcription = audio_service.transcribe_audio(audio_content, audio.filename)
+            raw_transcription = audio_service.transcribe_audio(audio_content, audio.filename)
             
-            # 2. Atualiza sessão com transcrição
+            # 2. Anonimiza transcrição substituindo nomes por letras
+            logger.info(f"Anonimizando transcrição da sessão {session_id}")
+            transcription = openai_service.anonymize_names_in_transcription(
+                raw_transcription, 
+                patient_name, 
+                psychologist_name
+            )
+            
+            # 3. Atualiza sessão com transcrição anonimizada
             logger.info(f"Salvando transcrição da sessão {session_id}")
             supabase_service.update_session(session_id, {"transcription": transcription})
             
-            # 3. Processa com OpenAI (resumos, demandas, contexto)
+            # 4. Gera perguntas sobre a sessão
+            logger.info(f"Gerando perguntas sobre a sessão {session_id}")
+            questions = openai_service.generate_session_questions(
+                transcription,
+                patient_name,
+                psychologist_name
+            )
+            
+            # 5. Processa com OpenAI (resumos, demandas, contexto)
             logger.info(f"Processando com OpenAI a sessão {session_id}")
             results = openai_service.process_session(transcription)
             
-            # 4. Atualiza sessão com todos os resultados (incluindo análise da IA)
+            # 6. Atualiza sessão com todos os resultados (incluindo análise da IA e perguntas)
             logger.info(f"Salvando resultados do processamento da sessão {session_id}")
             updated_session = supabase_service.update_session(session_id, {
                 "full_summary": results["full_summary"],
                 "anonymous_summary": results["anonymous_summary"],
                 "patient_demand": results["patient_demand"],
                 "context": results["context"],
-                "analise_da_ia": results["analise_da_ia"]
+                "analise_da_ia": results["analise_da_ia"],
+                "questions": questions,
+                "answers": None  # Inicializa como None, será preenchido depois
             })
             
             logger.info(f"Sessão {session_id} processada com sucesso - todos os dados salvos")
@@ -121,4 +139,36 @@ async def list_sessions(
         patient_id=str(patient_id) if patient_id else None
     )
     return [SessionResponse(**session) for session in sessions]
+
+@router.patch("/{session_id}/answers", response_model=SessionResponse)
+async def update_session_answers(
+    session_id: UUID,
+    answers: list[str] = Body(...),
+    api_key: str = Depends(verify_api_key)
+):
+    """Atualiza as respostas às perguntas da sessão"""
+    # Verifica se a sessão existe
+    session = supabase_service.get_session(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    
+    # Verifica se há perguntas
+    questions = session.get("questions")
+    if not questions:
+        raise HTTPException(status_code=400, detail="Esta sessão não possui perguntas")
+    
+    # Valida que o número de respostas corresponde ao número de perguntas
+    if len(answers) != len(questions):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"O número de respostas ({len(answers)}) deve corresponder ao número de perguntas ({len(questions)})"
+        )
+    
+    # Atualiza as respostas
+    updated_session = supabase_service.update_session(str(session_id), {"answers": answers})
+    
+    if not updated_session:
+        raise HTTPException(status_code=500, detail="Erro ao atualizar respostas")
+    
+    return SessionResponse(**updated_session)
 

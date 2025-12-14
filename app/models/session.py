@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
@@ -19,6 +19,8 @@ class SessionResponse(BaseModel):
     patient_demand: Optional[str]
     context: Optional[str]
     analise_da_ia: Optional[str] = None
+    questions: Optional[List[str]] = None
+    answers: Optional[List[str]] = None
     created_at: datetime
     updated_at: datetime
     
@@ -32,4 +34,6 @@ class SessionUpdate(BaseModel):
     patient_demand: Optional[str] = None
     context: Optional[str] = None
     analise_da_ia: Optional[str] = None
+    questions: Optional[List[str]] = None
+    answers: Optional[List[str]] = None
 
