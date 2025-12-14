@@ -269,6 +269,75 @@ Perguntas:"""
         
         return questions
     
+    def generate_conclusion(self, transcription: str, context: str, patient_demand: str, analise_da_ia: str, answers: list[str]) -> str:
+        """Gera a conclusão final da sessão baseada no contexto, análise e respostas do psicólogo"""
+        
+        # Formata as respostas para incluir no prompt
+        answers_text = "\n".join([f"{i+1}. {answer}" for i, answer in enumerate(answers)]) if answers else "Nenhuma resposta fornecida ainda."
+        
+        prompt = f"""Você é um assistente especializado em elaborar conclusões de sessões de psicoterapia seguindo a metodologia FAP (Functional Analytic Psychotherapy).
+
+IMPORTANTE: Use APENAS "Paciente" para se referir ao paciente e "você" para se referir à psicóloga. NUNCA use nomes próprios, letras ou identificadores pessoais.
+
+Elabore uma conclusão completa da sessão seguindo RIGOROSAMENTE a estrutura abaixo. Use as informações fornecidas e as respostas da psicóloga às perguntas reflexivas.
+
+ESTRUTURA OBRIGATÓRIA:
+
+0. Resumo da Sessão:
+[Breve resumo (2-3 frases) dos principais eventos e processos FAP da sessão]
+
+1. Demanda Trazida e Contexto Inicial:
+- Relatos do Paciente: [Descrição dos relatos do paciente]
+- Antecedentes (A) Relevantes: [Contexto histórico e imediato]
+- Análise FAP Inicial: [CCR1s e CCR2s potenciais identificados]
+
+2. Intervenção Clínica (FAP in vivo):
+[Descrição das ações específicas do terapeuta com análise funcional FAP de cada intervenção principal]
+
+3. Resposta do Paciente (Observação de CCRs - Regra 1):
+[Descrição das reações e comportamentos do paciente com análise FAP]
+
+4. Análise Funcional ABC Principal da Interação:
+[Análise da contingência A-B-C principal observada]
+
+5. Planejamento (Próxima Sessão e Generalização - Regra 5):
+- Objetivos FAP Próxima Sessão: [Objetivos específicos]
+- Tarefas de Casa: [Se houver, com justificativa FAP]
+- Ações Futuras Terapeuta: [Ações e ajustes]
+
+6. Correlação com Sessão Anterior:
+[Breve comparação FAP com sessões anteriores, se aplicável]
+
+INFORMAÇÕES DA SESSÃO:
+
+Transcrição:
+{transcription}
+
+Contexto:
+{context}
+
+Demanda do Paciente:
+{patient_demand}
+
+Análise da IA (FAP):
+{analise_da_ia}
+
+Respostas da Psicóloga às Perguntas Reflexivas:
+{answers_text}
+
+Elabore a conclusão completa seguindo EXATAMENTE a estrutura acima, usando apenas "Paciente" e "você" para se referir às pessoas envolvidas."""
+        
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um assistente especializado em análise FAP de sessões de psicoterapia. Você elabora conclusões detalhadas seguindo rigorosamente a metodologia FAP, usando apenas 'Paciente' e 'você' para se referir às pessoas. NUNCA use nomes próprios ou identificadores pessoais."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        
+        return response.choices[0].message.content
+    
     def process_session(self, transcription: str) -> Dict[str, str]:
         """Processa toda a sessão e retorna todos os resultados"""
         return {

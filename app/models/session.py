@@ -21,6 +21,7 @@ class SessionResponse(BaseModel):
     analise_da_ia: Optional[str] = None
     questions: Optional[List[str]] = None
     answers: Optional[List[str]] = None
+    conclusion: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     
@@ -36,4 +37,5 @@ class SessionUpdate(BaseModel):
     analise_da_ia: Optional[str] = None
     questions: Optional[List[str]] = None
     answers: Optional[List[str]] = None
+    conclusion: Optional[str] = None
 

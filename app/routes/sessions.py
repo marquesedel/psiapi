@@ -172,3 +172,55 @@ async def update_session_answers(
     
     return SessionResponse(**updated_session)
 
+@router.post("/{session_id}/conclusion", response_model=SessionResponse)
+async def generate_session_conclusion(
+    session_id: UUID,
+    api_key: str = Depends(verify_api_key)
+):
+    """Gera a conclusão final da sessão baseada no contexto, análise e respostas do psicólogo"""
+    # Verifica se a sessão existe
+    session = supabase_service.get_session(str(session_id))
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    
+    # Verifica se há respostas
+    answers = session.get("answers")
+    if not answers:
+        raise HTTPException(
+            status_code=400, 
+            detail="Esta sessão não possui respostas às perguntas. É necessário responder às perguntas antes de gerar a conclusão."
+        )
+    
+    # Obtém os dados necessários
+    transcription = session.get("transcription")
+    context = session.get("context")
+    patient_demand = session.get("patient_demand")
+    analise_da_ia = session.get("analise_da_ia")
+    
+    if not transcription:
+        raise HTTPException(status_code=400, detail="Esta sessão não possui transcrição")
+    
+    # Gera a conclusão
+    logger.info(f"Gerando conclusão para a sessão {session_id}")
+    try:
+        conclusion = openai_service.generate_conclusion(
+            transcription=transcription or "",
+            context=context or "",
+            patient_demand=patient_demand or "",
+            analise_da_ia=analise_da_ia or "",
+            answers=answers
+        )
+        
+        # Atualiza a sessão com a conclusão
+        updated_session = supabase_service.update_session(str(session_id), {"conclusion": conclusion})
+        
+        if not updated_session:
+            raise HTTPException(status_code=500, detail="Erro ao salvar conclusão")
+        
+        logger.info(f"Conclusão gerada e salva para a sessão {session_id}")
+        return SessionResponse(**updated_session)
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar conclusão para sessão {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar conclusão: {str(e)}")
+
